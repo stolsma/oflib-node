@@ -9,7 +9,7 @@ module.exports.bin = [
                0x0d,                          // type = 13
                0x00, 0x35,                    // length = 53
                0x49, 0x96, 0x02, 0xd2,        // xid = 1234567890
-                 0xff, 0xff, 0xff, 0xff,             // buffer_id = -1
+               0xff, 0xff, 0xff, 0xff,             // buffer_id = -1
                  0x00, 0x00, 0x00, 0x02,             // in_port = 2
                  0x00, 0x18,                         // actions_len = 24
                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // pad
