@@ -9,149 +9,143 @@ var util = require('util');
 var testutil = require('./testutil.js');
 
 String.prototype.endsWith = function(suffix) {
-    return this.indexOf(suffix, this.length - suffix.length) !== -1;
+  return this.indexOf(suffix, this.length - suffix.length) !== -1;
 };
 
 function testUnpack(path, module) {
-    var files = [];
-    if (path.endsWith('/')) {
-        fs.readdirSync(path).filter(function(file) { return file.endsWith('.js') })
-                            .sort()
-                            .forEach(function(file) { files.push(path + file) });
+  var files = [];
+  if (path.endsWith('/')) {
+    fs.readdirSync(path).filter(function(file) { return file.endsWith('.js') })
+                        .sort()
+                        .forEach(function(file) { files.push(path + file) });
+  } else {
+    files.push(path);
+  }
+
+  files.forEach(function(file) {
+    process.stdout.write('Unpacking ' + file + ' ...');
+
+    var test = require(file);
+
+    var offset = 42;
+
+    var buf = new Buffer(test.bin.length + offset);
+    (new Buffer(test.bin)).copy(buf, offset);
+
+    var unpack = module.unpack(buf, offset);
+
+    if ('warnings' in test) {
+      // negative testcase for warnings
+      if (!('warnings' in unpack)) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("Expected \"warnings\", received %j\n", unpack));
+      } else {
+        process.stdout.write(' OK.\n');
+      }
+    } else if ('error' in test) {
+      // negative testcase for error
+      if (!('error' in unpack)) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("Expected \"error\", received %j\n", unpack));
+      } else {
+        process.stdout.write(' OK.\n');
+      }
     } else {
-        files.push(path);
-    }
+      // positive testcase
+      var expect = {};
+      expect[module.struct] = test.obj;
+      expect.offset = test.bin.length + offset;
 
-    files.forEach(function(file) {
-        process.stdout.write('Unpacking ' + file + ' ...');
+      if ('error' in unpack) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("%j\n", unpack.error));
+      } else if ('warnings' in unpack) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("%j\n", unpack.warnings));
+        //TODO: compare results
+      } else {
+        var res = testutil.objEquals(unpack, expect);
 
-        var test = require(file);
-
-        var offset = 42;
-
-        var buf = new Buffer(test.bin.length + offset);
-        (new Buffer(test.bin)).copy(buf, offset);
-
-        var unpack = module.unpack(buf, offset);
-
-        if ('warnings' in test) {
-            // negative testcase for warnings
-            if (!('warnings' in unpack)) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("Expected \"warnings\", received %j\n", unpack));
-            } else {
-                process.stdout.write(' OK.\n');
-            }
-
-        } else if ('error' in test) {
-            // negative testcase for error
-            if (!('error' in unpack)) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("Expected \"error\", received %j\n", unpack));
-            } else {
-                process.stdout.write(' OK.\n');
-            }
-
+        if ('error' in res) {
+            process.stderr.write(' ERROR.\n');
+            process.stderr.write(util.format("%j\n", res.error));
         } else {
-            // positive testcase
-            var expect = {};
-            expect[module.struct] = test.obj;
-            expect.offset = test.bin.length + offset;
-
-            if ('error' in unpack) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("%j\n", unpack.error));
-            } else if ('warnings' in unpack) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("%j\n", unpack.warnings));
-                //TODO: compare results
-            } else {
-                var res = testutil.objEquals(unpack, expect);
-
-                if ('error' in res) {
-                    process.stderr.write(' ERROR.\n');
-                    process.stderr.write(util.format("%j\n", res.error));
-                } else {
-                    process.stdout.write(' OK.\n');
-                }
-            }
+            process.stdout.write(' OK.\n');
         }
-    });
-
+      }
+    }
+  });
 }
 
 function testPack(path, module) {
-    var files = [];
-    if (path.endsWith('/')) {
-        fs.readdirSync(path).filter(function(file) { return file.endsWith('.js') })
-                            .sort()
-                            .forEach(function(file) { files.push(path + file) });
+  var files = [];
+  if (path.endsWith('/')) {
+    fs.readdirSync(path).filter(function(file) { return file.endsWith('.js') })
+                        .sort()
+                        .forEach(function(file) { files.push(path + file) });
+  } else {
+    files.push(path);
+  }
+
+  files.forEach(function(file) {
+    process.stdout.write('Packing ' + file + ' ...');
+
+    var test = require(file);
+
+    var offset = 42;
+
+    var buf = new Buffer(65535);
+    var pack = module.pack(test.obj, buf, offset);
+
+    if ('warnings' in test) {
+      // negative testcase for warnings
+      if (!('warnings' in pack)) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("Expected \"warnings\", received %j\n", pack));
+        //TODO: compare results
+      } else {
+        process.stdout.write(' OK.\n');
+      }
+    } else if ('error' in test) {
+      // negative testcase for error
+      if (!('error' in pack)) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("Expected \"error\", received %j\n", pack));
+      } else {
+        process.stdout.write(' OK.\n');
+      }
     } else {
-        files.push(path);
-    }
+      // positive testcase
 
-    files.forEach(function(file) {
-        process.stdout.write('Packing ' + file + ' ...');
-
-        var test = require(file);
-
-        var offset = 42;
-
-        var buf = new Buffer(65535);
-        var pack = module.pack(test.obj, buf, offset);
-
-        if ('warnings' in test) {
-            // negative testcase for warnings
-            if (!('warnings' in pack)) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("Expected \"warnings\", received %j\n", pack));
-                //TODO: compare results
-            } else {
-                process.stdout.write(' OK.\n');
-            }
-
-        } else if ('error' in test) {
-            // negative testcase for error
-            if (!('error' in pack)) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("Expected \"error\", received %j\n", pack));
-            } else {
-                process.stdout.write(' OK.\n');
-            }
-
+      if ('error' in pack) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("%j\n", pack.error));
+      } else if ('warnings' in pack) {
+        process.stderr.write(' ERROR.\n');
+        process.stderr.write(util.format("%j\n", pack.warnings));
+      } else {
+        if (test.bin.length + offset != pack.offset) {
+          process.stderr.write(' ERROR.\n');
+          process.stderr.write(util.format('Pack length differs (%d, %d).', test.bin.length, pack.offset));
         } else {
-            // positive testcase
 
-            if ('error' in pack) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("%j\n", pack.error));
-            } else if ('warnings' in pack) {
-                process.stderr.write(' ERROR.\n');
-                process.stderr.write(util.format("%j\n", pack.warnings));
-            } else {
-                if (test.bin.length + offset != pack.offset) {
-                    process.stderr.write(' ERROR.\n');
-                    process.stderr.write(util.format('Pack length differs (%d, %d).', test.bin.length, pack.offset));
-                } else {
+          var res = testutil.bufEquals(buf.slice(offset), new Buffer(test.bin), pack.offset - offset);
 
-                    var res = testutil.bufEquals(buf.slice(offset), new Buffer(test.bin), pack.offset - offset);
-
-                    if ('error' in res) {
-                        process.stderr.write(' ERROR.\n');
-                        process.stderr.write(util.format("%j\n", res.error));
-                    } else {
-                        process.stdout.write(' OK.\n');
-                    }
-                }
-            }
+          if ('error' in res) {
+            process.stderr.write(' ERROR.\n');
+            process.stderr.write(util.format("%j\n", res.error));
+          } else {
+            process.stdout.write(' OK.\n');
+          }
         }
-    });
-
+      }
+    }
+  });
 }
 
 function testBoth(path, module) {
-    testUnpack(path, module);
-    testPack(path, module);
+  testUnpack(path, module);
+  testPack(path, module);
 }
 
 /* OpenFlow 1.1 */

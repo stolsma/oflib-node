@@ -10,4 +10,4 @@ module.exports = {
     Stream  : require('./lib/stream.js'),
     JSON    : require('./lib/json.js'),
     ofp     : require('./lib/ofp.js')
-}
+};
